@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Wallet, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useWallet, WalletNotInstalledError } from "@/frontend/lib/wallet-context";
+import { useWallet } from "@/frontend/lib/wallet-context";
 
 function truncate(address: string, head = 4, tail = 4): string {
   if (address.length <= head + tail + 1) return address;
@@ -14,7 +14,7 @@ export interface ConnectWalletButtonProps
   extends React.HTMLAttributes<HTMLDivElement> {}
 
 export function ConnectWalletButton({ className, ...props }: ConnectWalletButtonProps) {
-  const { publicKey, isConnecting, connect, disconnect } = useWallet();
+  const { publicKey, isSignedIn, isConnecting, isSigningIn, connect, disconnect } = useWallet();
   const [error, setError] = React.useState<string | null>(null);
 
   const handleConnect = React.useCallback(async () => {
@@ -22,12 +22,7 @@ export function ConnectWalletButton({ className, ...props }: ConnectWalletButton
     try {
       await connect();
     } catch (err) {
-      const message =
-        err instanceof WalletNotInstalledError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : "Failed to connect wallet";
+      const message = err instanceof Error ? err.message : "Failed to connect wallet";
       setError(message);
     }
   }, [connect]);
@@ -45,6 +40,11 @@ export function ConnectWalletButton({ className, ...props }: ConnectWalletButton
         <code className="font-mono text-foreground" title={publicKey}>
           {truncate(publicKey)}
         </code>
+        {/* LOBSTR connects without a server session — see wallet-context.tsx.
+            Surface that distinction rather than implying full sign-in. */}
+        {!isSignedIn && (
+          <span className="text-[0.65rem] text-muted-foreground">connected</span>
+        )}
         <button
           type="button"
           onClick={disconnect}
@@ -66,7 +66,7 @@ export function ConnectWalletButton({ className, ...props }: ConnectWalletButton
         className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
       >
         <Wallet className="size-3.5" aria-hidden />
-        {isConnecting ? "Connecting…" : "Connect wallet"}
+        {isSigningIn ? "Signing in…" : isConnecting ? "Connecting…" : "Connect wallet"}
       </button>
       {error ? (
         <p role="alert" className="max-w-xs text-right text-[0.65rem] text-destructive">
